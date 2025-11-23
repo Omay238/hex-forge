@@ -6,11 +6,53 @@ const CAMERA_SPEED: f32 = 4.0;
 #[derive(Component)]
 struct Player;
 
+// https://stackoverflow.com/a/40778485
+fn hex_pos(x: f32, y: f32) -> Vec2 {
+    let r = 124.0;
+    let w = r * 2.0;
+    let h = 3.0_f32.sqrt() * r;
+
+    let mut pos = Vec2::ZERO;
+
+    let r2 = r / 2.0;
+    let h2 = h / 2.0;
+    let mut xx = (x / 2.0).floor();
+    let yy = (y / 2.0).floor();
+    let xpos = (xx / 3.0).floor();
+    xx %= 6.0;
+    if xx % 3.0 == 0.0 {
+        let mut xa = (x % r2) / r2;
+        let mut ya = (y % h2) / h2;
+        if yy % 2.0 == 0.0 {
+            ya = 1.0 - ya;
+        }
+        if xx == 3.0 {
+            xa = 1.0 - xa;
+        }
+        if xa > ya {
+            pos.x = xpos + (if xx == 3.0 {-1.0} else {0.0});
+            pos.y = ((yy + 1.0) / 2.0).floor();
+            return pos;
+        }
+        pos.x = xpos + (if xx == 0.0 {-1.0} else {0.0});
+        pos.y = ((yy + 1.0) / 2.0).floor();
+        return pos;
+    }
+    if xx < 3.0 {
+        pos.x = xpos + (if xx == 3.0 {-1.0} else {0.0});
+        pos.y = (yy / 2.0).floor();
+        return pos;
+    }
+    pos.x = xpos + (if xx == 0.0 {-1.0} else {0.0});
+    pos.y = ((yy + 1.0) / 2.0).floor();
+    pos
+}
+
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins);
     app.add_systems(Startup, setup);
-    app.add_systems(Update, (move_player, update_camera).chain());
+    app.add_systems(Update, ((move_player, update_camera).chain(), mouse_interaction));
     app.run();
 }
 
@@ -30,7 +72,7 @@ fn setup(
 
     for x in -100..100 {
         for y in -100..100 {
-            let root_position = Vec2::new((186 * x) as f32, (107 * y * 2 + (if x % 2 == 0 {107} else {0})) as f32);
+            let root_position = Vec2::new((186 * x) as f32, (y * 214 + (if x % 2 == 0 {107} else {0})) as f32);
             shapes.push(
                 meshes.add(Polyline2d::new(vec![
                     root_position + Vec2::new(62.0, -107.0),
@@ -89,4 +131,20 @@ fn update_camera(
     camera
         .translation
         .smooth_nudge(&direction, CAMERA_SPEED, time.delta_secs());
+}
+
+fn mouse_interaction(
+    camera_query: Single<(&Camera, &GlobalTransform)>,
+    window: Single<&Window>,
+) {
+    let (camera, camera_transform) = *camera_query;
+
+    if let Some(cursor_position) = window.cursor_position()
+        && let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_position)
+        && let Ok(viewport_check) = camera.world_to_viewport(camera_transform, world_pos.extend(0.0))
+        && let Ok(world_check) = camera.viewport_to_world_2d(camera_transform, viewport_check.xy())
+    {
+        let pos = hex_pos(world_check.x + 18600.0, world_check.y + 21400.0);
+        println!("Hex Position: {pos}");
+    }
 }
