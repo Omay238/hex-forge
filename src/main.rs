@@ -4,48 +4,23 @@ const PLAYER_SPEED: f32 = 250.0;
 const CAMERA_SPEED: f32 = 4.0;
 
 #[derive(Component)]
+struct PositionText;
+
+#[derive(Component)]
 struct Player;
 
-// https://stackoverflow.com/a/40778485
-fn hex_pos(x: f32, y: f32) -> Vec2 {
-    let r = 124.0;
-    let w = r * 2.0;
-    let h = 3.0_f32.sqrt() * r;
+fn hex_pos(pos: Vec2) -> Vec2 {
+    let mut col = (pos.x / 186.0).round();
+    let mut row = ((pos.y - if col % 2.0 == 0.0 { 107.0 } else { 0.0 }) / 214.0).round();
 
-    let mut pos = Vec2::ZERO;
+    if col == -0.0 {
+        col = 0.0;
+    }
+    if row == -0.0 {
+        row = 0.0;
+    }
 
-    let r2 = r / 2.0;
-    let h2 = h / 2.0;
-    let mut xx = (x / 2.0).floor();
-    let yy = (y / 2.0).floor();
-    let xpos = (xx / 3.0).floor();
-    xx %= 6.0;
-    if xx % 3.0 == 0.0 {
-        let mut xa = (x % r2) / r2;
-        let mut ya = (y % h2) / h2;
-        if yy % 2.0 == 0.0 {
-            ya = 1.0 - ya;
-        }
-        if xx == 3.0 {
-            xa = 1.0 - xa;
-        }
-        if xa > ya {
-            pos.x = xpos + (if xx == 3.0 {-1.0} else {0.0});
-            pos.y = ((yy + 1.0) / 2.0).floor();
-            return pos;
-        }
-        pos.x = xpos + (if xx == 0.0 {-1.0} else {0.0});
-        pos.y = ((yy + 1.0) / 2.0).floor();
-        return pos;
-    }
-    if xx < 3.0 {
-        pos.x = xpos + (if xx == 3.0 {-1.0} else {0.0});
-        pos.y = (yy / 2.0).floor();
-        return pos;
-    }
-    pos.x = xpos + (if xx == 0.0 {-1.0} else {0.0});
-    pos.y = ((yy + 1.0) / 2.0).floor();
-    pos
+    Vec2::new(col, row)
 }
 
 fn main() {
@@ -68,6 +43,11 @@ fn setup(
         Transform::from_xyz(0.0, 0.0, 2.0),
     ));
 
+    commands.spawn((
+        Text::new("(0,0)"),
+        PositionText
+    ));
+
     let mut shapes: Vec<Handle<Mesh>> = Vec::new();
 
     for x in -100..100 {
@@ -86,7 +66,7 @@ fn setup(
         }
     }
 
-    for (i, shape) in shapes.into_iter().enumerate() {
+    for (_, shape) in shapes.into_iter().enumerate() {
         commands.spawn((
             Mesh2d(shape),
             MeshMaterial2d(materials.add(Color::srgb(1.0, 0.5, 0.0))),
@@ -136,6 +116,7 @@ fn update_camera(
 fn mouse_interaction(
     camera_query: Single<(&Camera, &GlobalTransform)>,
     window: Single<&Window>,
+    mut query: Query<&mut Text, With<PositionText>>,
 ) {
     let (camera, camera_transform) = *camera_query;
 
@@ -144,7 +125,9 @@ fn mouse_interaction(
         && let Ok(viewport_check) = camera.world_to_viewport(camera_transform, world_pos.extend(0.0))
         && let Ok(world_check) = camera.viewport_to_world_2d(camera_transform, viewport_check.xy())
     {
-        let pos = hex_pos(world_check.x + 18600.0, world_check.y + 21400.0);
-        println!("Hex Position: {pos}");
+        let pos = hex_pos(world_check);
+        for mut span in &mut query {
+            **span = format!("{pos}");
+        }
     }
 }
