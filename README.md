@@ -10,4 +10,4 @@ just runs on rust. uses the bevy engine for the stuff that it does lol. this is 
 cool.
 
 ## demo
-https://github.com/user-attachments/assets/aa5a51e8-47d5-43aa-963f-ac7d603e902f
+https://github.com/user-attachments/assets/d72f42aa-9b68-4773-8e1f-20a089fb6c31
