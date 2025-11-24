@@ -56,29 +56,20 @@ fn spawn_hex(
     coord: IVec2,
     config: &Res<HexForgeConfig>,
 ) {
-    let fill_mesh = meshes.add(
-        ConvexPolygon::new(vec![
-            Vec2::new(62.0, -107.0),
-            Vec2::new(124.0, 0.0),
-            Vec2::new(62.0, 107.0),
-            Vec2::new(-62.0, 107.0),
-            Vec2::new(-124.0, 0.0),
-            Vec2::new(-62.0, -107.0),
-        ])
-        .unwrap()
-        .mesh(),
-    );
-
-    let fill_mat = materials.add(config.fill_color);
-
-    let stroke_mesh = meshes.add(Polyline2d::new(vec![
+    let vertices = vec![
         Vec2::new(62.0, -107.0),
         Vec2::new(124.0, 0.0),
         Vec2::new(62.0, 107.0),
         Vec2::new(-62.0, 107.0),
         Vec2::new(-124.0, 0.0),
         Vec2::new(-62.0, -107.0),
-    ]));
+    ];
+
+    let fill_mesh = meshes.add(ConvexPolygon::new(vertices.clone()).unwrap().mesh());
+
+    let fill_mat = materials.add(config.fill_color);
+
+    let stroke_mesh = meshes.add(Polyline2d::new(vertices));
 
     let stroke_mat = materials.add(config.stroke_color);
 
@@ -126,7 +117,7 @@ fn setup(
                 &mut materials,
                 root_position,
                 IVec2::new(x, y),
-                &config
+                &config,
             );
         }
     }
@@ -190,7 +181,7 @@ fn mouse_interaction(
     {
         let pos = hex_pos(world_check);
 
-        for (coord, mut material_handle) in &mut tiles {
+        for (coord, material_handle) in &mut tiles {
             let mat = materials.get_mut(&material_handle.0).unwrap();
 
             if coord == &pos {
