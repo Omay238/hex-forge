@@ -14,6 +14,9 @@ impl std::fmt::Display for Hex {
     }
 }
 
+#[derive(Component)]
+struct Tile;
+
 #[derive(Resource, Clone, Copy)]
 pub struct HexForgeConfig {
     pub player_speed: f32,
@@ -27,6 +30,7 @@ pub struct HexForgeConfig {
 struct HexForgeMemory {
     active_hexes: HashMap<IVec2, Entity>,
     inactive_hexes: HashMap<IVec2, Entity>,
+    current_pos: IVec2
 }
 
 pub struct HexForge {
@@ -55,6 +59,7 @@ fn spawn_hex(
     position: Vec2,
     coord: IVec2,
     config: &Res<HexForgeConfig>,
+    memory: &mut ResMut<HexForgeMemory>,
 ) {
     let vertices = vec![
         Vec2::new(62.0, -107.0),
@@ -73,10 +78,11 @@ fn spawn_hex(
 
     let stroke_mat = materials.add(config.stroke_color);
 
-    commands
+    let entity = commands
         .spawn((
             Transform::from_xyz(position.x, position.y, 0.0),
             Visibility::default(),
+            Tile
         ))
         .with_children(|p| {
             p.spawn((
@@ -90,7 +96,8 @@ fn spawn_hex(
                 MeshMaterial2d(stroke_mat),
                 Transform::from_xyz(0.0, 0.0, 0.1),
             ));
-        });
+        }).id();
+    memory.active_hexes.insert(coord, entity);
 }
 
 fn setup(
@@ -99,13 +106,14 @@ fn setup(
     mut materials: ResMut<Assets<ColorMaterial>>,
 
     config: Res<HexForgeConfig>,
+    mut memory: ResMut<HexForgeMemory>,
 ) {
     commands.spawn(Camera2d);
 
     commands.spawn((Player, Transform::from_xyz(0.0, 0.0, 2.0)));
 
-    for x in -5..5 {
-        for y in -5..5 {
+    for x in -5..=5 {
+        for y in -5..=5 {
             let root_position = Vec2::new(
                 (186 * x) as f32,
                 (y * 214 + (if x % 2 == 0 { 107 } else { 0 })) as f32,
@@ -118,6 +126,7 @@ fn setup(
                 root_position,
                 IVec2::new(x, y),
                 &config,
+                &mut memory
             );
         }
     }
@@ -153,6 +162,10 @@ fn update_camera(
     player: Single<&Transform, (With<Player>, Without<Camera2d>)>,
     time: Res<Time>,
     config: Res<HexForgeConfig>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut memory: ResMut<HexForgeMemory>,
+    mut commands: Commands,
 ) {
     let Vec3 { x, y, .. } = player.translation;
     let direction = Vec3::new(x, y, camera.translation.z);
@@ -160,6 +173,44 @@ fn update_camera(
     camera
         .translation
         .smooth_nudge(&direction, config.camera_speed, time.delta_secs());
+
+    if hex_pos(camera.translation.xy()).0 != memory.current_pos {
+        memory.current_pos = hex_pos(camera.translation.xy()).0;
+
+        let mut to_be_removed: Vec<IVec2> = Vec::new();
+        for (pos, entity) in memory.active_hexes.iter() {
+            if pos.x < memory.current_pos.x - 5 || pos.x > memory.current_pos.x + 5 ||
+                pos.y < memory.current_pos.y - 5 || pos.y > memory.current_pos.y + 5 {
+                commands.entity(*entity).despawn_children().despawn();
+                to_be_removed.push(*pos);
+            }
+        }
+
+        for x in memory.current_pos.x - 5..=memory.current_pos.x+5 {
+            for y in memory.current_pos.y - 5..=memory.current_pos.y + 5 {
+                if !memory.active_hexes.contains_key(&IVec2::new(x, y)) {
+                    let root_position = Vec2::new(
+                        (186 * x) as f32,
+                        (y * 214 + (if x % 2 == 0 { 107 } else { 0 })) as f32,
+                    );
+
+                    spawn_hex(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        root_position,
+                        IVec2::new(x, y),
+                        &config,
+                        &mut memory
+                    );
+                }
+            }
+        }
+
+        for pos in to_be_removed {
+            memory.active_hexes.remove(&pos);
+        }
+    }
 }
 
 fn mouse_interaction(
@@ -200,6 +251,7 @@ impl HexForge {
             memory: HexForgeMemory {
                 active_hexes: HashMap::new(),
                 inactive_hexes: HashMap::new(),
+                current_pos: IVec2::ZERO
             },
         }
     }
