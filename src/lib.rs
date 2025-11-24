@@ -29,7 +29,7 @@ pub struct HexForgeConfig {
 #[derive(Resource, Clone)]
 struct HexForgeMemory {
     active_hexes: HashMap<IVec2, Entity>,
-    inactive_hexes: HashMap<IVec2, Entity>,
+    hexes: Vec<IVec2>,
     current_pos: IVec2
 }
 
@@ -250,7 +250,7 @@ impl HexForge {
             config,
             memory: HexForgeMemory {
                 active_hexes: HashMap::new(),
-                inactive_hexes: HashMap::new(),
+                hexes: Vec::new(),
                 current_pos: IVec2::ZERO
             },
         }
@@ -271,7 +271,7 @@ impl HexForge {
         app.run();
     }
 
-    pub fn save(&mut self) -> HashMap<IVec2, Entity> {
-        self.memory.inactive_hexes.clone()
+    pub fn save(&mut self) -> Vec<IVec2> {
+        self.memory.hexes.clone()
     }
 }
