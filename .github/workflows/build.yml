@@ -23,7 +23,7 @@ jobs:
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     - name: install linux deps
       if: matrix.os == 'ubuntu-latest'
-      run: sudo apt-get update && sudo apt-get install -y libwayland-dev wayland-protocols libxkbcommon-dev libasound2-dev
+      run: sudo apt-get update && sudo apt-get install -y libwayland-dev wayland-protocols libxkbcommon-dev libasound2-dev libudev-dev
     - name: build
       run: |
         cargo build --release
