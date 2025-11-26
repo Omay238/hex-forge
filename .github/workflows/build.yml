@@ -21,8 +21,8 @@ jobs:
       shell: bash
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-    - name: install linux deps
-      if: ${{ matrix.os == ubuntu-latest }}
+    - if: ${{ matrix.os }} == ubuntu-latest
+      name: install linux deps
       run: sudo apt-get update && sudo apt-get install -y libwayland-dev wayland-protocols libxkbcommon-dev
     - name: build
       run: |
